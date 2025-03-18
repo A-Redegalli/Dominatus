@@ -24,9 +24,18 @@ public class JwtTokenProvider {
         this.expirationMillis = expirationMillis;
     }
 
-    public String generateToken(String userId, String email) {
+    public String generateAccessToken(String userId, String email) {
+        return generateToken(userId, email, expirationMillis);
+    }
+
+    public String generateRefreshToken(String userId, String email) {
+        long refreshExpirationMillis = 7 * 24 * 60 * 60 * 1000L; // 7d
+        return generateToken(userId, email, refreshExpirationMillis);
+    }
+
+    private String generateToken(String userId, String email, long expiryMillis) {
         Date now = new Date();
-        Date expiry = new Date(now.getTime() + expirationMillis);
+        Date expiry = new Date(now.getTime() + expiryMillis);
 
         return Jwts.builder()
                 .setSubject(userId)

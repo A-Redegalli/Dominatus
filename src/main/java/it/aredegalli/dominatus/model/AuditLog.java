@@ -24,12 +24,13 @@ public class AuditLog {
     @Column(nullable = false)
     private Instant timestamp = Instant.now();
 
-    @Column(name = "event_type", nullable = false, length = 50)
-    private String eventType;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_type")
+    private AuditEventType eventType;
 
     @Column(name = "application_name", length = 100)
     private String applicationName;
@@ -38,5 +39,5 @@ public class AuditLog {
     private String description;
 
     @Column(columnDefinition = "jsonb")
-    private String metadata; // Puoi usare una libreria JSON per gestione avanzata
+    private String metadata;
 }

@@ -1,4 +1,4 @@
-package it.aredegalli.dominatus.security.jwt;
+package it.aredegalli.dominatus.security.encryption;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

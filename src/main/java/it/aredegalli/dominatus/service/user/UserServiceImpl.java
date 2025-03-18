@@ -4,11 +4,12 @@ import it.aredegalli.dominatus.dto.user.UserCreateDto;
 import it.aredegalli.dominatus.dto.user.UserDto;
 import it.aredegalli.dominatus.model.User;
 import it.aredegalli.dominatus.repository.UserRepository;
-import it.aredegalli.dominatus.security.jwt.EncryptionService;
+import it.aredegalli.dominatus.security.encryption.EncryptionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,6 +37,7 @@ public class UserServiceImpl implements UserService {
                 .password(hashedPassword)
                 .firstName(encryptedFirstName)
                 .lastName(encryptedLastName)
+                .createdAt(Instant.now())
                 .build();
 
         return userRepository.save(user);
