@@ -1,6 +1,5 @@
 package it.aredegalli.dominatus.service.audit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.aredegalli.dominatus.enums.AuditEventTypeEnum;
 import it.aredegalli.dominatus.model.AuditEventType;
@@ -14,6 +13,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -25,38 +25,22 @@ public class AuditServiceImpl implements AuditService {
 
     @Async
     @Override
-    public void logEvent(User user, AuditEventTypeEnum eventEnum, String appName, String description, Object metadata) {
+    public void logEvent(User user, AuditEventTypeEnum eventEnum, String appName, String description, Map<String, Object> metadata) {
         AuditEventType eventType = eventTypeRepository.findByDescription(eventEnum.name())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid event type: " + eventEnum.name()));
+                .orElseGet(() -> eventTypeRepository.save(AuditEventType.builder().description(eventEnum.name()).build()));
 
-        AuditLog audit = null;
-        String metadataJson = null;
-        try {
-            metadataJson = objectMapper.writeValueAsString(metadata);
+        AuditLog audit = AuditLog.builder()
+                .user(user)
+                .eventType(eventType)
+                .applicationName(appName)
+                .description(description)
+                .metadata(metadata)
+                .timestamp(Instant.now())
+                .build();
 
-            audit = AuditLog.builder()
-                    .user(user)
-                    .eventType(eventType)
-                    .applicationName(appName)
-                    .description(description)
-                    .metadata(metadataJson)
-                    .timestamp(Instant.now())
-                    .build();
-
-            log.info("[AUDIT] Audit event: {}", audit);
-        } catch (JsonProcessingException e) {
-            audit = AuditLog.builder()
-                    .user(user)
-                    .eventType(eventTypeRepository.findByDescription(AuditEventTypeEnum.AUDIT_ERROR.name()).orElseThrow())
-                    .applicationName(appName)
-                    .description(description)
-                    .metadata("Error serializing metadata: " + e.getMessage())
-                    .timestamp(Instant.now())
-                    .build();
-
-            log.warn("[AUDIT] Error serializing metadata: {}", metadata, e);
-        }
+        log.info("[AUDIT] Audit event: {}", audit);
 
         auditLogRepository.save(audit);
     }
+
 }

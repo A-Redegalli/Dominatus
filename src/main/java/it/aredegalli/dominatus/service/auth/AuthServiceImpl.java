@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -54,8 +55,8 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Invalid email or password");
         }
 
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getId().toString(), user.getEmail());
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId().toString(), user.getEmail());
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getId().toString(), user.getEmail(), null, this.initExtraClaims());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId().toString(), user.getEmail(), null);
 
         auditService.logEvent(user, AuditEventTypeEnum.LOGIN, "Dominatus", "Login Success", Map.of(
                 "ipv4", ip,
@@ -82,8 +83,8 @@ public class AuthServiceImpl implements AuthService {
         String firstName = encryptionService.decrypt(user.getFirstName());
         String lastName = encryptionService.decrypt(user.getLastName());
 
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getId().toString(), user.getEmail());
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId().toString(), user.getEmail());
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getId().toString(), user.getEmail(), null, this.initExtraClaims());
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId().toString(), user.getEmail(), null);
 
         String ip = RequestUtil.getClientIp(httpServletRequest);
         auditService.logEvent(user, AuditEventTypeEnum.REGISTER, "Dominatus", "Register Success", Map.of(
@@ -154,17 +155,31 @@ public class AuthServiceImpl implements AuthService {
                 .expiresAt(claims.getExpiration().toInstant())
                 .build());
 
-        String newAccessToken = jwtTokenProvider.generateAccessToken(userId, email);
+        String newAccessToken = jwtTokenProvider.generateAccessToken(userId, email, null, this.initExtraClaims());
+        String newRefreshToken = jwtTokenProvider.generateRefreshToken(userId, email, null);
 
         auditService.logEvent(user, AuditEventTypeEnum.TOKEN_REFRESH, "Dominatus", "Token Refresh", Map.of(
                 "ipv4", ip,
                 "event", AuditEventTypeEnum.TOKEN_REFRESH.name(),
-                "refreshTokenHash", tokenHash,
-                "accessTokenHash", HashUtil.sha256(newAccessToken)));
+                "usedRefreshTokenHash", tokenHash,
+                "accessTokenHash", HashUtil.sha256(newAccessToken),
+                "refreshTokenHash", HashUtil.sha256(newRefreshToken)));
 
         return RefreshResponseDto.builder()
                 .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
                 .build();
+    }
+
+    private Map<String, Object> initExtraClaims() {
+        String ip = RequestUtil.getClientIp(httpServletRequest);
+        String userAgent = httpServletRequest.getHeader("User-Agent");
+
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("ipv4", ip);
+        extraClaims.put("user-agent", userAgent);
+
+        return extraClaims;
     }
 
 }

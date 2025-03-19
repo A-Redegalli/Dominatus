@@ -1,54 +1,69 @@
 package it.aredegalli.dominatus.security.jwt;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.Base64;
+import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class JwtTokenProvider {
 
-    private final byte[] secretKey;
+    private final JwtKeyManager keyManager;
     private final long expirationMillis;
 
     public JwtTokenProvider(
-            @Value("${security.jwt.secret-key}") String base64Secret,
-            @Value("${security.jwt.expiration-time}") long expirationMillis) {
-        this.secretKey = Base64.getDecoder().decode(base64Secret);
+            @Value("${security.jwt.expiration-time}") long expirationMillis,
+            JwtKeyManager keyManager
+    ) {
         this.expirationMillis = expirationMillis;
+        this.keyManager = keyManager;
     }
 
-    public String generateAccessToken(String userId, String email) {
-        return generateToken(userId, email, expirationMillis);
+    public String generateAccessToken(String userId, String email, String appName, Map<String, Object> extraClaims) {
+        return generateToken(userId, email, appName, expirationMillis, extraClaims);
     }
 
-    public String generateRefreshToken(String userId, String email) {
+    public String generateRefreshToken(String userId, String email, String appName) {
         long refreshExpirationMillis = 7 * 24 * 60 * 60 * 1000L; // 7d
-        return generateToken(userId, email, refreshExpirationMillis);
+        return generateToken(userId, email, appName, refreshExpirationMillis, null);
     }
 
-    private String generateToken(String userId, String email, long expiryMillis) {
+    public String generateToken(String userId, String email, String appName, long expiryMillis, Map<String, Object> extraClaims) {
+        SecretKey key = keyManager.getActiveKey();
+        String kid = keyManager.getActiveKeyId();
+
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expiryMillis);
 
-        return Jwts.builder()
+        JwtBuilder builder = Jwts.builder()
                 .setSubject(userId)
                 .claim("email", email)
+                .claim("app", appName)
+                .setAudience(appName) // aud
+                .setIssuer("dominatus-backend") // iss
+                .setId(UUID.randomUUID().toString()) // jti
                 .setIssuedAt(now)
                 .setExpiration(expiry)
-                .signWith(Keys.hmacShaKeyFor(secretKey), SignatureAlgorithm.HS512)
-                .compact();
+                .setHeaderParam(Header.TYPE, Header.JWT_TYPE)
+                .setHeaderParam("k-id", kid)
+                .signWith(key, SignatureAlgorithm.HS512);
+
+        if (extraClaims != null) {
+            extraClaims.forEach(builder::claim);
+        }
+
+        return builder.compact();
     }
 
     public boolean validateToken(String token) {
+        SecretKey key = keyManager.getActiveKey();
+
         try {
-            Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token);
+            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
             return false;
@@ -56,6 +71,7 @@ public class JwtTokenProvider {
     }
 
     public Claims getClaims(String token) {
-        return Jwts.parserBuilder().setSigningKey(secretKey).build().parseClaimsJws(token).getBody();
+        SecretKey key = keyManager.getActiveKey();
+        return Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
     }
 }

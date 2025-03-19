@@ -9,5 +9,5 @@ public enum AuditEventTypeEnum {
     CHANGE_PASSWORD_FAIL,
     CHANGE_PASSWORD_SUCCESS,
     REGISTER,
-    AUDIT_ERROR
+    KEY_ROTATION,
 }
