@@ -10,7 +10,7 @@
     </parent>
     <groupId>it.aredegalli</groupId>
     <artifactId>dominatus</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>Dominatus</name>
     <description>Dominatus is a powerful and flexible authentication and authorization server, designed to govern user
         access, roles, and permissions across modern web applications. Built with Spring Boot and PostgreSQL, Dominatus
