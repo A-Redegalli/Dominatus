@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  dominatus-be:
+    container_name: dominatus-be
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - praetor-net
+
+networks:
+  praetor-net:
+    driver: bridge

@@ -36,6 +36,7 @@ public class JwtKeyManager {
         this.rotateKey(false);
     }
 
+    @Deprecated
     public synchronized void rotateKey(boolean scheduler) {
         String newKid = UUID.randomUUID().toString();
         SecretKey newKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);

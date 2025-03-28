@@ -1,6 +1,5 @@
 package it.aredegalli.dominatus.service.audit;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import it.aredegalli.dominatus.enums.AuditEventTypeEnum;
 import it.aredegalli.dominatus.model.AuditEventType;
 import it.aredegalli.dominatus.model.AuditLog;
@@ -21,7 +20,6 @@ import java.util.Map;
 public class AuditServiceImpl implements AuditService {
     private final AuditLogRepository auditLogRepository;
     private final AuditEventTypeRepository eventTypeRepository;
-    private final ObjectMapper objectMapper;
 
     @Async
     @Override

@@ -51,13 +51,9 @@ security:
     allowed-origins: "*"
     allowed-methods: "*"
     allowed-headers: "*"
-
-# JWT Configuration
-security.jwt:
-  secret-key: ${DOMINATUS_JWT_SECRET}
-  expiration-time: 3600000 # 1 hour in milliseconds
-
-# AES Encryption Key for sensitive data
-security.crypto:
-  aes-secret-key: ${DOMINATUS_AES_KEY}
+  jwt:
+    private-key: classpath:jwt/dominatus-private.pem
+    expiration-time: 3600000 # 1 hour in milliseconds
+  crypto:
+    aes-secret-key: ${DOMINATUS_AES_KEY}
 
