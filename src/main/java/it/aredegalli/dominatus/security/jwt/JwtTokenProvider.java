@@ -1,20 +1,20 @@
 package it.aredegalli.dominatus.security.jwt;
 
-import io.jsonwebtoken.Header;
-import io.jsonwebtoken.JwtBuilder;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
@@ -25,13 +25,16 @@ public class JwtTokenProvider {
 
     private final long expirationMillis;
     private final PrivateKey privateKey;
+    private final PublicKey publicKey;
 
     public JwtTokenProvider(
             @Value("${security.jwt.expiration-time}") long expirationMillis,
-            @Value("${security.jwt.private-key}") Resource keyFile
+            @Value("${security.jwt.private-key}") Resource privateKeyFile,
+            @Value("${security.jwt.public-key}") Resource publicKeyFile
     ) {
         this.expirationMillis = expirationMillis;
-        this.privateKey = loadPrivateKeyFromPem(keyFile);
+        this.privateKey = loadPrivateKeyFromPem(privateKeyFile);
+        this.publicKey = loadPublicKeyFromPem(publicKeyFile);
     }
 
     public String generateAccessToken(String userId, String email, String appName, Map<String, Object> extraClaims) {
@@ -66,21 +69,56 @@ public class JwtTokenProvider {
         return builder.compact();
     }
 
-    private PrivateKey loadPrivateKeyFromPem(Resource pemFile) {
-        try {
-            String pem = new String(pemFile.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
-                    .replaceAll("-----BEGIN PRIVATE KEY-----", "")
-                    .replaceAll("-----END PRIVATE KEY-----", "")
+    public RSAPrivateKey loadPrivateKeyFromPem(Resource resource) {
+        try (InputStream is = resource.getInputStream()) {
+            String pem = new String(is.readAllBytes())
+                    .replaceAll("-----BEGIN (.*)-----", "")
+                    .replaceAll("-----END (.*)-----", "")
                     .replaceAll("\\s", "");
 
-            byte[] decoded = Decoders.BASE64.decode(pem);
-            PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(decoded);
+            byte[] keyBytes = Base64.getDecoder().decode(pem);
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
             KeyFactory kf = KeyFactory.getInstance("RSA");
-            return kf.generatePrivate(spec);
-        } catch (IOException | RuntimeException e) {
-            throw new IllegalStateException("Errore durante il caricamento della chiave privata JWT", e);
+            return (RSAPrivateKey) kf.generatePrivate(keySpec);
         } catch (Exception e) {
-            throw new RuntimeException("Errore nella costruzione della PrivateKey", e);
+            throw new IllegalStateException("Errore durante il caricamento della chiave privata JWT", e);
         }
+    }
+
+    public RSAPublicKey loadPublicKeyFromPem(Resource resource) {
+        try (InputStream is = resource.getInputStream()) {
+            String pem = new String(is.readAllBytes())
+                    .replaceAll("-----BEGIN (.*)-----", "")
+                    .replaceAll("-----END (.*)-----", "")
+                    .replaceAll("\\s", "");
+
+            byte[] keyBytes = Base64.getDecoder().decode(pem);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyBytes);
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            return (RSAPublicKey) kf.generatePublic(keySpec);
+        } catch (Exception e) {
+            throw new IllegalStateException("Errore durante il caricamento della chiave pubblica JWT", e);
+        }
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder()
+                    .setSigningKey(publicKey)
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            log.error("Invalid JWT: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    public Claims getClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(publicKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 }

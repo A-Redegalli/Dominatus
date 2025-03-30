@@ -29,13 +29,12 @@ spring:
 
 # SSL Config (HTTPS enabled with keystore)
 server:
-  port: 8443
+  port: 8444
   ssl:
     enabled: true
     key-store: classpath:keystore.p12
     key-store-password: ${DOMINATUS_KEYSTORE_PASSWORD}
     key-store-type: PKCS12
-    key-alias: mycert
 
 # Logging
 logging:
@@ -52,7 +51,8 @@ security:
     allowed-methods: "*"
     allowed-headers: "*"
   jwt:
-    private-key: classpath:jwt/dominatus-private.pem
+    private-key: classpath:jwt/dominatus-private.key
+    public-key: classpath:jwt/dominatus-public.pem
     expiration-time: 3600000 # 1 hour in milliseconds
   crypto:
     aes-secret-key: ${DOMINATUS_AES_KEY}

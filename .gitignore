@@ -34,3 +34,7 @@ build/
 
 ### Docker ###
 .env
+
+### Security ###
+src/main/resources/jwt
+src/main/resources/keystore.p12
