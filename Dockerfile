@@ -1,19 +1,25 @@
 # Stage 1: Build with Maven
-FROM maven:3.9-eclipse-temurin-17 AS builder
+FROM maven:3.9-eclipse-temurin-21 AS builder
+
 WORKDIR /app
 COPY . .
-RUN mvn clean package -DskipTests
 
-# Stage 2: Run with minimal JVM (distroless)
-FROM eclipse-temurin:17-jre-alpine
+# Costruisce un JAR eseguibile senza toccare il POM
+RUN mvn clean package spring-boot:repackage -DskipTests
 
-ENV DOMINATUS_PROFILE=docker
+# Secondo stage: immagine leggera per esecuzione
+FROM eclipse-temurin:21-jre-alpine
 
-# App location
+ENV PRAETOR_PROFILE=docker
+
 WORKDIR /app
 
-# Copy JAR from previous stage
-COPY --from=builder /app/target/*.jar dominatus-v.1.0.0.jar
+# Copia il JAR dallo stage precedente e lo rinomina
+COPY --from=builder /app/target/*.jar dominatus.jar
 
-# Run the app
-ENTRYPOINT ["java", "-Xmx128m", "-Xms64m", "-XX:+UseSerialGC", "-jar", "dominatus-v.1.0.0.jar"]
+# Permette override da esterno (es. variabili o docker-compose)
+ENV JAVA_TOOL_OPTIONS="-Xmx128m -Xms64m -XX:+UseSerialGC"
+
+ENTRYPOINT ["java", "-jar", "dominatus.jar"]
+
+

@@ -9,7 +9,12 @@ services:
     env_file:
       - .env
     ports:
-      - "8080:8080"
+      - "9000:8443"
+      - "5005:5005"
+    environment:
+      JAVA_TOOL_OPTIONS: >
+        -Xmx128m -Xms64m -XX:+UseSerialGC
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     restart: unless-stopped
     networks:
       - praetor-net

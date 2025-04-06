@@ -29,7 +29,8 @@ spring:
 
 # SSL Config (HTTPS enabled with keystore)
 server:
-  port: 8444
+  address: 0.0.0.0
+  port: 8443
   ssl:
     enabled: true
     key-store: classpath:keystore.p12
@@ -43,6 +44,9 @@ logging:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql: TRACE
+    it.aredegalli: DEBUG
+    org.springframework.web: DEBUG
+
 
 # CORS Configuration (can be restricted per environment)
 security:
